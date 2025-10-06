@@ -94,3 +94,4 @@ tests/__pycache__/
 !README.md
 !DEPLOYMENT_STRATEGY.md
 !VERCEL_DEPLOYMENT_GUIDE.md
+.vercel
