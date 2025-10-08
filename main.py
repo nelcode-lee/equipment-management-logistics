@@ -20,7 +20,7 @@ def main():
     print(f"🌐 API Base URL: http://{settings.HOST}:{settings.PORT}")
     
     uvicorn.run(
-        app,
+        "src.api.main:app",
         host=settings.HOST,
         port=settings.PORT,
         reload=settings.DEBUG,

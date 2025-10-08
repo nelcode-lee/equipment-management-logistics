@@ -1,15 +1,39 @@
-# Equipment Tracking System
+# 🚀 Equipment Tracker - AI-Powered Equipment Management
 
-An AI-powered equipment tracking system for logistics companies that automates equipment movement recording through photo processing.
+> **Stop wasting time on manual tracking. Your drivers snap photos, AI extracts data, you get real-time visibility.**
 
-## 🚀 Features
+An AI-powered equipment management system for rental companies. Drivers photograph delivery notes, AI extracts the data instantly, and your office gets real-time visibility of all equipment.
 
-- **AI Photo Processing**: Uses Claude Sonnet to extract equipment data from delivery note photos
-- **Real-time Tracking**: Automatic equipment balance updates and movement recording
-- **Smart Alerts**: Automated notifications when customers exceed equipment thresholds
-- **Web Dashboard**: React-based interface for monitoring and management
-- **RESTful API**: FastAPI backend with comprehensive endpoints
-- **Database Integration**: PostgreSQL for persistent data storage
+## ⚡ Quick Links
+
+**📖 [START HERE: Launch Guide](LAUNCH_GUIDE.md)** - Your complete guide to deployment
+
+**🔒 [Security Checklist](SECURITY_CHECKLIST.md)** - Security audit before deployment
+
+**🚀 [Deployment Commands](DEPLOYMENT_COMMANDS.md)** - Step-by-step deployment
+
+**📢 [Marketing Strategy](MARKETING_ASSETS.md)** - Complete marketing playbook
+
+**✅ [Deployment Ready](DEPLOYMENT_READY.md)** - System status & next steps
+
+---
+
+## 🎯 Features
+
+### Core Functionality
+- 📸 **AI Photo Recognition** - Upload delivery notes, AI extracts all data
+- 📊 **Real-Time Tracking** - Know exactly where all equipment is, always
+- 🚚 **Smart Driver Instructions** - Auto-generated collection reminders
+- 👥 **Fleet Management** - Track drivers, vehicles, licenses, MOT, insurance
+- 💰 **Balance Tracking** - Customer equipment balances with threshold alerts
+- 📱 **Mobile-First** - Optimized driver app for phones
+
+### Security & Performance
+- 🔐 **JWT Authentication** - Secure login with role-based access
+- ⚡ **Rate Limiting** - 60 requests/min protection
+- 🛡️ **Security Headers** - XSS, clickjacking protection
+- 🔒 **SSL/TLS** - Encrypted data in transit
+- 💾 **Database Encryption** - Encrypted data at rest
 
 ## 🏗️ Architecture
 

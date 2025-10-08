@@ -11,6 +11,7 @@ import {
   FileTextOutlined
 } from '@ant-design/icons';
 import axios from 'axios';
+import API_BASE_URL from '../config';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -41,7 +42,7 @@ const DriverApp = () => {
 
   const fetchCompanyLogo = async () => {
     try {
-      const response = await axios.get('http://localhost:8000/company/logo');
+      const response = await axios.get(`${API_BASE_URL}/company/logo`);
       if (response.data.logo) {
         setCompanyLogo(response.data.logo);
       }

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Table, Tag, Input, Select, Button, Card, Space, message, Spin } from 'antd';
 import { SearchOutlined, ReloadOutlined } from '@ant-design/icons';
 import axios from 'axios';
+import API_BASE_URL from '../config';
 
 const { Option } = Select;
 

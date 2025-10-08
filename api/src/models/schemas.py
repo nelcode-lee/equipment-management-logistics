@@ -11,6 +11,7 @@ class EquipmentType(str, Enum):
     CAGE = "cage"
     DOLLY = "dolly"
     STILLAGE = "stillage"
+    CONTAINER = "container"
     OTHER = "other"
 
 class EquipmentSpecification(BaseModel):
@@ -70,6 +71,33 @@ class AlertResponse(BaseModel):
     excess: int
     last_movement: datetime
     priority: str
+
+class EquipmentMovementResponse(BaseModel):
+    movement_id: str
+    customer_name: str
+    equipment_type: EquipmentType
+    equipment_spec_id: Optional[str] = None
+    equipment_name: Optional[str] = None
+    equipment_color: Optional[str] = None
+    equipment_size: Optional[str] = None
+    equipment_grade: Optional[str] = None
+    quantity: int
+    direction: Direction
+    timestamp: datetime
+    driver_name: Optional[str] = None
+    confidence_score: float
+    notes: Optional[str] = None
+    verified: bool = False
+    source_image_url: Optional[str] = None
+
+class CustomerBalance(BaseModel):
+    id: Optional[str] = None
+    customer_name: str
+    equipment_type: EquipmentType
+    current_balance: int = 0
+    threshold: int = 20
+    last_movement: Optional[datetime] = None
+    status: str = "normal"  # "normal", "over_threshold", "negative"
 
 class HealthResponse(BaseModel):
     status: str

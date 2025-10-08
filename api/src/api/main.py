@@ -14,7 +14,7 @@ import uuid
 from ..config import settings
 from ..models.database import get_db, create_tables, EquipmentMovement as DBMovement, CustomerBalance, EquipmentSpecification as DBEquipmentSpec
 from ..models.schemas import (
-    EquipmentMovement, CustomerBalance, ExtractionResult, 
+    EquipmentMovement, EquipmentMovementResponse, CustomerBalance, ExtractionResult, 
     AlertResponse, HealthResponse, EquipmentType, EquipmentSpecification
 )
 from ..models.auth_models import User, UserRole
@@ -38,7 +38,7 @@ app.add_middleware(RequestLoggingMiddleware)
 app.add_middleware(RateLimitMiddleware, requests_per_minute=60, burst_size=10)
 app.add_middleware(SecurityHeadersMiddleware)
 
-# CORS middleware (restricted origins)
+# CORS middleware (production-ready)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.get_cors_origins_list(),
@@ -141,7 +141,7 @@ def get_movements(
         EquipmentMovement(
             movement_id=m.movement_id,
             customer_name=m.customer_name,
-            equipment_type=m.equipment_type,
+            equipment_type=EquipmentType(m.equipment_type.lower()),
             quantity=m.quantity,
             direction=m.direction,
             timestamp=m.timestamp,
@@ -168,8 +168,9 @@ def get_balances(
     
     return [
         CustomerBalance(
+            id=b.id,
             customer_name=b.customer_name,
-            equipment_type=b.equipment_type,
+            equipment_type=EquipmentType(b.equipment_type.lower()),
             current_balance=b.current_balance,
             threshold=b.threshold,
             last_movement=b.last_movement,
@@ -239,7 +240,7 @@ def get_alerts(
     return [
         AlertResponse(
             customer_name=a.customer_name,
-            equipment_type=a.equipment_type,
+            equipment_type=EquipmentType(a.equipment_type.lower()),
             current_balance=a.current_balance,
             threshold=a.threshold,
             excess=a.excess,
@@ -372,7 +373,7 @@ def get_equipment_specifications(
     specs = query.all()
     return [EquipmentSpecification.model_validate({
         'id': spec.id,
-        'equipment_type': spec.equipment_type,
+        'equipment_type': EquipmentType(spec.equipment_type.lower()),
         'name': spec.name,
         'color': spec.color,
         'size': spec.size,
@@ -492,7 +493,12 @@ def get_equipment_specification(
 
 # Logo management endpoints
 LOGO_DIR = "uploads/logos"
-os.makedirs(LOGO_DIR, exist_ok=True)
+# Skip directory creation in serverless/read-only environments
+try:
+    if not os.environ.get("VERCEL") and not os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
+        os.makedirs(LOGO_DIR, exist_ok=True)
+except (OSError, PermissionError):
+    pass  # Ignore if can't create directory (serverless environment)
 
 @app.post("/company/logo")
 async def upload_company_logo(file: UploadFile = File(...)):

@@ -7,6 +7,14 @@ import json
 import re
 from datetime import datetime
 from typing import List, Optional
+from io import BytesIO
+from PIL import Image
+try:
+    from pillow_heif import register_heif_opener
+    register_heif_opener()
+    HEIF_SUPPORT = True
+except ImportError:
+    HEIF_SUPPORT = False
 from ..config import settings
 from ..models.schemas import EquipmentMovement, ExtractionResult, EquipmentType, Direction
 
@@ -17,13 +25,40 @@ class AIService:
     def extract_equipment_from_image(self, image_bytes: bytes, driver_name: str = None) -> ExtractionResult:
         """
         Uses Claude Vision API to extract equipment movement data from delivery note photos
+        Supports JPEG, PNG, WEBP, GIF, and HEIC (iPhone) formats
         """
         try:
+            # Convert HEIC/HEIF to JPEG if needed, or ensure proper format
+            try:
+                img = Image.open(BytesIO(image_bytes))
+                
+                # Convert to RGB if needed (handles RGBA, P, L modes)
+                if img.mode not in ('RGB', 'L'):
+                    img = img.convert('RGB')
+                
+                # Re-encode as JPEG for consistent processing
+                output = BytesIO()
+                img.save(output, format='JPEG', quality=95)
+                image_bytes = output.getvalue()
+                media_type = "image/jpeg"
+                
+            except Exception as conversion_error:
+                # If conversion fails, try to use original bytes
+                print(f"Image conversion warning: {conversion_error}")
+                # Determine media type from image bytes
+                if image_bytes[:2] == b'\xff\xd8':
+                    media_type = "image/jpeg"
+                elif image_bytes[:4] == b'\x89PNG':
+                    media_type = "image/png"
+                elif image_bytes[:4] == b'RIFF':
+                    media_type = "image/webp"
+                elif image_bytes[:4] == b'GIF8':
+                    media_type = "image/gif"
+                else:
+                    media_type = "image/jpeg"  # fallback
+            
             # Encode image to base64
             base64_image = base64.b64encode(image_bytes).decode('utf-8')
-            
-            # Determine media type (simplified - assumes JPEG)
-            media_type = "image/jpeg"
             
             # Create prompt for Claude
             prompt = """Analyze this delivery note/paperwork image and extract equipment movement information.
@@ -55,7 +90,7 @@ If you cannot extract information confidently, set confidence below 0.7 and expl
 
             # Call Claude API
             message = self.client.messages.create(
-                model="claude-3-5-sonnet-20241022",
+                model="claude-3-5-sonnet-latest",
                 max_tokens=1024,
                 messages=[
                     {
@@ -112,10 +147,18 @@ If you cannot extract information confidently, set confidence below 0.7 and expl
             )
             
         except Exception as e:
+            error_msg = str(e)
+            # Provide helpful error messages
+            if "Could not process image" in error_msg or "invalid_request_error" in error_msg:
+                user_friendly_msg = "The image could not be processed by AI. Please ensure you're uploading a clear, readable delivery note photo (not a tiny test image). The image should be at least 200x200 pixels with visible text content."
+            else:
+                user_friendly_msg = f"AI processing error: {error_msg}"
+            
             return ExtractionResult(
                 success=False,
                 movements=[],
-                error=str(e)
+                error=user_friendly_msg,
+                raw_text=error_msg
             )
 
 # Global instance

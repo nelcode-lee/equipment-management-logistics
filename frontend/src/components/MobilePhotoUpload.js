@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Card, Button, message, Alert, Spin, Input, Typography } from 'antd';
 import { CameraOutlined, UploadOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import axios from 'axios';
+import API_BASE_URL from '../config';
 
 const { Title, Text } = Typography;
 
@@ -41,7 +42,7 @@ const MobilePhotoUpload = () => {
         formData.append('driver_name', driverName);
       }
 
-      const response = await axios.post('http://localhost:8000/upload-photo', formData, {
+      const response = await axios.post(`${API_BASE_URL}/upload-photo`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },

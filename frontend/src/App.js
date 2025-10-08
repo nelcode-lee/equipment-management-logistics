@@ -9,15 +9,18 @@ import {
   BarChartOutlined,
   TruckOutlined,
   SettingOutlined,
-  TrophyOutlined
+  TrophyOutlined,
+  CarOutlined
 } from '@ant-design/icons';
 import axios from 'axios';
+import API_BASE_URL from './config';
 import Dashboard from './components/Dashboard';
 import PhotoUpload from './components/PhotoUpload';
 import Alerts from './components/Alerts';
 import Movements from './components/Movements';
 import Balances from './components/Balances';
 import DriverInstructions from './components/DriverInstructions';
+import FleetManagement from './components/FleetManagement';
 import MobilePhotoUpload from './components/MobilePhotoUpload';
 import MobileDriverInstructions from './components/MobileDriverInstructions';
 import Settings from './components/Settings';
@@ -47,6 +50,11 @@ function App() {
       key: 'instructions',
       icon: <TruckOutlined />,
       label: 'Driver Instructions',
+    },
+    {
+      key: 'fleet',
+      icon: <CarOutlined />,
+      label: 'Fleet Management',
     },
     {
       key: 'alerts',
@@ -90,7 +98,7 @@ function App() {
   React.useEffect(() => {
     const fetchLogo = async () => {
       try {
-        const response = await axios.get('http://localhost:8000/company/logo');
+        const response = await axios.get(`${API_BASE_URL}/company/logo`);
         if (response.data.logo) {
           setCompanyLogo(response.data.logo);
         }
@@ -109,6 +117,8 @@ function App() {
         return isMobile ? <MobilePhotoUpload /> : <PhotoUpload />;
       case 'instructions':
         return isMobile ? <MobileDriverInstructions /> : <DriverInstructions />;
+      case 'fleet':
+        return <FleetManagement />;
       case 'alerts':
         return <Alerts />;
       case 'movements':
@@ -153,7 +163,7 @@ function App() {
             {companyLogo ? (
               <>
                 <img 
-                  src={`http://localhost:8000${companyLogo}`} 
+                  src={`${API_BASE_URL}${companyLogo}`} 
                   alt="Company Logo" 
                   style={{ height: '24px', objectFit: 'contain' }} 
                 />

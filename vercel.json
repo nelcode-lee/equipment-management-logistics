@@ -2,20 +2,17 @@
   "version": 2,
   "builds": [
     {
-      "src": "main_vercel.py",
+      "src": "api/serverless_api.py",
       "use": "@vercel/python",
       "config": {
-        "maxLambdaSize": "50mb"
+        "maxLambdaSize": "15mb"
       }
     }
   ],
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "main_vercel.py"
+      "dest": "api/serverless_api.py"
     }
-  ],
-  "env": {
-    "PYTHONPATH": "."
-  }
+  ]
 }

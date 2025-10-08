@@ -55,7 +55,7 @@ class Settings:
     # =============================================================================
     SECRET_KEY: str = os.getenv("SECRET_KEY", "your_secret_key_here")
     JWT_EXPIRATION_HOURS: int = int(os.getenv("JWT_EXPIRATION_HOURS", "24"))
-    CORS_ORIGINS: str = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:8000")
+    CORS_ORIGINS: str = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:8000,https://equipment-office-dashboard.vercel.app,https://equipment-driver-app.vercel.app")
     
     # =============================================================================
     # LOGGING CONFIGURATION

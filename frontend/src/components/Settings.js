@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, Form, Input, Button, Table, Tag, Modal, message, Select, InputNumber, Space, Tabs, Divider, Typography, Upload, Avatar } from 'antd';
 import { SettingOutlined, PlusOutlined, EditOutlined, DeleteOutlined, SaveOutlined, UploadOutlined, UserOutlined, ToolOutlined } from '@ant-design/icons';
 import axios from 'axios';
+import API_BASE_URL from '../config';
 import EquipmentManagement from './EquipmentManagement';
 
 const { Option } = Select;
@@ -39,7 +40,7 @@ const Settings = () => {
     try {
       setLoading(true);
       // Get unique customers from movements
-      const response = await axios.get('http://localhost:8000/movements?limit=1000');
+      const response = await axios.get(`${API_BASE_URL}/movements?limit=1000`);
       const movements = response.data;
       const uniqueCustomers = [...new Set(movements.map(m => m.customer_name))];
       
@@ -65,7 +66,7 @@ const Settings = () => {
   const fetchThresholds = async () => {
     try {
       // Get current thresholds from balances
-      const response = await axios.get('http://localhost:8000/balances');
+      const response = await axios.get(`${API_BASE_URL}/balances`);
       const balances = response.data;
       
       const thresholdMap = {};
@@ -82,7 +83,7 @@ const Settings = () => {
 
   const fetchEquipmentSpecs = async () => {
     try {
-      const response = await axios.get('http://localhost:8000/equipment-specifications?is_active=true');
+      const response = await axios.get(`${API_BASE_URL}/equipment-specifications?is_active=true`);
       setEquipmentSpecs(response.data);
       
       // Initialize spec thresholds with default values
@@ -201,7 +202,7 @@ const Settings = () => {
   // Logo management functions
   const fetchCompanyLogo = async () => {
     try {
-      const response = await axios.get('http://localhost:8000/company/logo');
+      const response = await axios.get(`${API_BASE_URL}/company/logo`);
       if (response.data.logo) {
         setCompanyLogo(response.data.logo);
       }
@@ -217,7 +218,7 @@ const Settings = () => {
       const formData = new FormData();
       formData.append('logo', file);
       
-      const response = await axios.post('http://localhost:8000/company/logo', formData, {
+      const response = await axios.post(`${API_BASE_URL}/company/logo`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -236,7 +237,7 @@ const Settings = () => {
 
   const handleLogoRemove = async () => {
     try {
-      await axios.delete('http://localhost:8000/company/logo');
+      await axios.delete(`${API_BASE_URL}/company/logo`);
       setCompanyLogo(null);
       message.success('Company logo removed successfully!');
     } catch (error) {
@@ -749,7 +750,7 @@ const ThresholdsTable = ({ onThresholdChange, equipmentTypes }) => {
   const fetchBalances = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('http://localhost:8000/balances');
+      const response = await axios.get(`${API_BASE_URL}/balances`);
       setBalances(response.data);
     } catch (error) {
       console.error('Error fetching balances:', error);

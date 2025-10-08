@@ -1,19 +1,29 @@
 """
-Vercel-optimized main.py for Equipment Management Logistics API
+Minimal Vercel serverless entry point for Equipment Tracker API
 """
-import os
-import sys
-from pathlib import Path
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
-# Add src directory to Python path
-current_dir = Path(__file__).parent
-src_dir = current_dir / "src"
-sys.path.insert(0, str(src_dir))
+# Create FastAPI app
+app = FastAPI(title="Equipment Management API", version="1.0.0")
 
-# Import the FastAPI app
-from src.api.main import app
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"],
+    allow_headers=["*"],
+    expose_headers=["*"],
+)
 
-# This is the entry point for Vercel
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+@app.get("/health")
+def health():
+    return {"status": "healthy", "message": "Equipment Tracker API is running"}
+
+@app.get("/")
+def root():
+    return {"message": "Equipment Management API", "version": "1.0.0"}
+
+# Vercel handler
+handler = app

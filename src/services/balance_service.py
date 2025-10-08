@@ -145,4 +145,16 @@ class BalanceService:
         
         self.db.commit()
         return balance
+    
+    def get_all_balances(self, status: Optional[str] = None) -> List[CustomerBalance]:
+        """
+        Get all customer balances, optionally filtered by status
+        """
+        query = self.db.query(CustomerBalance)
+        if status:
+            query = query.filter(CustomerBalance.status == status)
+        return query.all()
 
+
+# Global instance
+balance_service = BalanceService(None)

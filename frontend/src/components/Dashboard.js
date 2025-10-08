@@ -15,6 +15,7 @@ import {
   TruckOutlined
 } from '@ant-design/icons';
 import axios from 'axios';
+import API_BASE_URL from '../config';
 
 const { Title, Text } = Typography;
 
@@ -46,13 +47,13 @@ const Dashboard = () => {
       setLoading(true);
       
       // Fetch all data in parallel
-      const [healthResponse, movementsResponse, alertsResponse, balancesResponse, instructionsResponse, logoResponse] = await Promise.all([
-        axios.get('http://localhost:8000/health'),
-        axios.get('http://localhost:8000/movements?limit=100'),
-        axios.get('http://localhost:8000/alerts'),
-        axios.get('http://localhost:8000/balances'),
-        axios.get('http://localhost:8000/driver-instructions'),
-        axios.get('http://localhost:8000/company/logo').catch(() => ({ data: { logo: null } }))
+      const [healthResponse, movementsResponse, alertsResponse, balancesResponse, instructionsResponse, logoResponse] = await       Promise.all([
+        axios.get(`${API_BASE_URL}/health`),
+        axios.get(`${API_BASE_URL}/movements?limit=100`),
+        axios.get(`${API_BASE_URL}/alerts`),
+        axios.get(`${API_BASE_URL}/balances`),
+        axios.get(`${API_BASE_URL}/driver-instructions`),
+        axios.get(`${API_BASE_URL}/company/logo`).catch(() => ({ data: { logo: null } }))
       ]);
 
       const healthData = healthResponse.data;

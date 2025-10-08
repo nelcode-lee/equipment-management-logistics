@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Table, Tag, Button, message, Card, Statistic, Row, Col, Spin } from 'antd';
 import { AlertOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import axios from 'axios';
+import API_BASE_URL from '../config';
 
 const Alerts = () => {
   const [alerts, setAlerts] = useState([]);
@@ -14,7 +15,7 @@ const Alerts = () => {
   const fetchAlerts = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('http://localhost:8000/alerts');
+      const response = await axios.get(`${API_BASE_URL}/alerts`);
       setAlerts(response.data);
     } catch (error) {
       console.error('Error fetching alerts:', error);

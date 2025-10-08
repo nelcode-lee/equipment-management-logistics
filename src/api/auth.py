@@ -10,7 +10,7 @@ from ..models.auth_schemas import (
     UserCreate, UserResponse, UserLogin, Token, UserUpdate, 
     PasswordChange, PasswordResetRequest, PasswordResetConfirm
 )
-from ..models.auth_models import UserRole
+from ..models.auth_models import UserRole, User
 from ..services.auth_service import AuthService
 from ..services.auth_dependencies import (
     get_auth_service, get_current_active_user, require_admin,

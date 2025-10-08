@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Upload, Button, message, Card, Descriptions, Tag, Spin, Alert } from 'antd';
 import { InboxOutlined, UploadOutlined } from '@ant-design/icons';
 import axios from 'axios';
+import API_BASE_URL from '../config';
 
 const { Dragger } = Upload;
 
@@ -21,7 +22,7 @@ const PhotoUpload = () => {
         formData.append('driver_name', driverName);
       }
 
-      const response = await axios.post('http://localhost:8000/upload-photo', formData, {
+      const response = await axios.post(`${API_BASE_URL}/upload-photo`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },

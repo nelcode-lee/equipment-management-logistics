@@ -26,6 +26,7 @@ import {
   ToolOutlined
 } from '@ant-design/icons';
 import axios from 'axios';
+import API_BASE_URL from '../config';
 
 const { Option } = Select;
 const { Title, Text } = Typography;
@@ -72,7 +73,7 @@ const EquipmentManagement = () => {
   const fetchEquipmentSpecs = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('http://localhost:8000/equipment-specifications');
+      const response = await axios.get(`${API_BASE_URL}/equipment-specifications`);
       setEquipmentSpecs(response.data);
     } catch (error) {
       console.error('Error fetching equipment specifications:', error);
@@ -90,7 +91,7 @@ const EquipmentManagement = () => {
         message.success('Equipment specification updated successfully');
       } else {
         // Create new spec
-        await axios.post('http://localhost:8000/equipment-specifications', values);
+        await axios.post(`${API_BASE_URL}/equipment-specifications`, values);
         message.success('Equipment specification created successfully');
       }
       

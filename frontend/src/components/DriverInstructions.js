@@ -1,23 +1,33 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Table, Tag, Button, Modal, Form, Input, Select, message, Alert, Space } from 'antd';
-import { ExclamationCircleOutlined, CheckCircleOutlined, TruckOutlined } from '@ant-design/icons';
+import { Card, Table, Tag, Button, Modal, Form, Input, Select, message, Alert, Space, DatePicker, InputNumber, Tabs } from 'antd';
+import { ExclamationCircleOutlined, CheckCircleOutlined, TruckOutlined, PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import axios from 'axios';
+import API_BASE_URL from '../config';
+import dayjs from 'dayjs';
 
 const { Option } = Select;
 
 const DriverInstructions = () => {
   const [instructions, setInstructions] = useState([]);
+  const [customInstructions, setCustomInstructions] = useState([]);
   const [filteredInstructions, setFilteredInstructions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
+  const [createModalVisible, setCreateModalVisible] = useState(false);
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editingInstruction, setEditingInstruction] = useState(null);
   const [statusFilter, setStatusFilter] = useState('all');
   const [form] = Form.useForm();
+  const [createForm] = Form.useForm();
+  const [editForm] = Form.useForm();
+  const [drivers, setDrivers] = useState([]);
+  const [vehicles, setVehicles] = useState([]);
 
   // Fetch outstanding balances that need collection
   const fetchOutstandingBalances = async () => {
     setLoading(true);
     try {
-      const response = await axios.get('http://localhost:8000/balances?status=over_threshold');
+      const response = await axios.get(`${API_BASE_URL}/balances?status=over_threshold`);
       const balances = response.data;
       
       // Convert balances to driver instructions
@@ -55,9 +65,137 @@ const DriverInstructions = () => {
     }
   }, [instructions, statusFilter]);
 
+  // Fetch custom driver instructions
+  const fetchCustomInstructions = async () => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/driver-instructions`);
+      setCustomInstructions(response.data);
+    } catch (error) {
+      console.error('Error fetching custom instructions:', error);
+      message.error('Failed to load custom instructions');
+    }
+  };
+
+  // Fetch drivers list
+  const fetchDrivers = async () => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/drivers?is_active=true`);
+      setDrivers(response.data);
+    } catch (error) {
+      console.error('Error fetching drivers:', error);
+    }
+  };
+
+  // Fetch vehicles list
+  const fetchVehicles = async () => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/vehicles?is_active=true`);
+      setVehicles(response.data);
+    } catch (error) {
+      console.error('Error fetching vehicles:', error);
+    }
+  };
+
   useEffect(() => {
     fetchOutstandingBalances();
+    fetchCustomInstructions();
+    fetchDrivers();
+    fetchVehicles();
   }, []);
+
+  // Create new custom instruction
+  const createCustomInstruction = async (values) => {
+    try {
+      const instructionData = {
+        title: values.title,
+        content: values.content,
+        priority: values.priority,
+        assigned_driver: values.assigned_driver,
+        customer_name: values.customer_name,
+        delivery_location: values.delivery_location,
+        contact_phone: values.contact_phone,
+        delivery_date: values.delivery_date ? values.delivery_date.format('YYYY-MM-DD HH:mm:ss') : null,
+        equipment_type: values.equipment_type,
+        equipment_quantity: values.equipment_quantity,
+        special_instructions: values.special_instructions
+      };
+
+      const response = await axios.post(`${API_BASE_URL}/driver-instructions`, instructionData);
+      message.success('Custom instruction created successfully!');
+      setCreateModalVisible(false);
+      createForm.resetFields();
+      fetchCustomInstructions();
+    } catch (error) {
+      console.error('Error creating instruction:', error);
+      message.error('Failed to create instruction');
+    }
+  };
+
+  // Update custom instruction
+  const updateCustomInstruction = async (values) => {
+    try {
+      const instructionData = {
+        title: values.title,
+        content: values.content,
+        priority: values.priority,
+        assigned_driver: values.assigned_driver,
+        customer_name: values.customer_name,
+        delivery_location: values.delivery_location,
+        contact_phone: values.contact_phone,
+        delivery_date: values.delivery_date ? values.delivery_date.format('YYYY-MM-DD HH:mm:ss') : null,
+        equipment_type: values.equipment_type,
+        equipment_quantity: values.equipment_quantity,
+        special_instructions: values.special_instructions
+      };
+
+      await axios.put(`http://localhost:8000/driver-instructions/${editingInstruction.id}`, instructionData);
+      message.success('Instruction updated successfully!');
+      setEditModalVisible(false);
+      setEditingInstruction(null);
+      editForm.resetFields();
+      fetchCustomInstructions();
+    } catch (error) {
+      console.error('Error updating instruction:', error);
+      message.error('Failed to update instruction');
+    }
+  };
+
+  // Delete custom instruction
+  const deleteCustomInstruction = async (instructionId) => {
+    Modal.confirm({
+      title: 'Delete Instruction',
+      content: 'Are you sure you want to delete this instruction?',
+      onOk: async () => {
+        try {
+          await axios.delete(`http://localhost:8000/driver-instructions/${instructionId}`);
+          message.success('Instruction deleted successfully!');
+          fetchCustomInstructions();
+        } catch (error) {
+          console.error('Error deleting instruction:', error);
+          message.error('Failed to delete instruction');
+        }
+      }
+    });
+  };
+
+  // Edit instruction handler
+  const handleEditInstruction = (instruction) => {
+    setEditingInstruction(instruction);
+    editForm.setFieldsValue({
+      title: instruction.title,
+      content: instruction.content,
+      priority: instruction.priority,
+      assigned_driver: instruction.assigned_driver,
+      customer_name: instruction.customer_name,
+      delivery_location: instruction.delivery_location,
+      contact_phone: instruction.contact_phone,
+      delivery_date: instruction.delivery_date ? dayjs(instruction.delivery_date) : null,
+      equipment_type: instruction.equipment_type,
+      equipment_quantity: instruction.equipment_quantity,
+      special_instructions: instruction.special_instructions
+    });
+    setEditModalVisible(true);
+  };
 
   // Assign instruction to driver
   const assignToDriver = async (instructionId, values) => {
@@ -296,64 +434,186 @@ const DriverInstructions = () => {
 
   const { high, medium, unable, pending } = getPriorityCounts();
 
+  const tabItems = [
+    {
+      key: 'auto-generated',
+      label: `Auto-Generated (${instructions.length})`,
+      children: (
+        <div>
+          <Space wrap style={{ marginBottom: 16 }}>
+            <Alert
+              message={`${high} High Priority Collections`}
+              type="error"
+              icon={<ExclamationCircleOutlined />}
+            />
+            <Alert
+              message={`${medium} Medium Priority Collections`}
+              type="warning"
+              icon={<ExclamationCircleOutlined />}
+            />
+            <Alert
+              message={`${unable} Unable to Collect`}
+              type="warning"
+              icon={<ExclamationCircleOutlined />}
+            />
+            <Alert
+              message={`${pending} Pending Assignment`}
+              type="info"
+              icon={<ExclamationCircleOutlined />}
+            />
+          </Space>
+
+          <Card>
+            <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3>Outstanding Equipment Collections</h3>
+              <Space>
+                <Select
+                  value={statusFilter}
+                  onChange={setStatusFilter}
+                  style={{ width: 150 }}
+                >
+                  <Option value="all">All Status</Option>
+                  <Option value="pending">Pending</Option>
+                  <Option value="assigned">Assigned</Option>
+                  <Option value="completed">Completed</Option>
+                  <Option value="unable_to_collect">Unable to Collect</Option>
+                  <Option value="failed">Failed</Option>
+                </Select>
+                <Button onClick={fetchOutstandingBalances} loading={loading}>
+                  Refresh
+                </Button>
+              </Space>
+            </div>
+            
+            <Table
+              columns={columns}
+              dataSource={filteredInstructions}
+              rowKey="id"
+              loading={loading}
+              pagination={{ pageSize: 10 }}
+              scroll={{ x: 800 }}
+            />
+          </Card>
+        </div>
+      )
+    },
+    {
+      key: 'custom',
+      label: `Custom Instructions (${customInstructions.length})`,
+      children: (
+        <div>
+          <Card>
+            <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3>Custom Driver Instructions</h3>
+              <Space>
+                <Button 
+                  type="primary" 
+                  icon={<PlusOutlined />}
+                  onClick={() => setCreateModalVisible(true)}
+                >
+                  Create New Instruction
+                </Button>
+                <Button onClick={fetchCustomInstructions} loading={loading}>
+                  Refresh
+                </Button>
+              </Space>
+            </div>
+            
+            <Table
+              columns={[
+                {
+                  title: 'Title',
+                  dataIndex: 'title',
+                  key: 'title',
+                  render: (text) => <strong>{text}</strong>
+                },
+                {
+                  title: 'Content',
+                  dataIndex: 'content',
+                  key: 'content',
+                  ellipsis: true
+                },
+                {
+                  title: 'Priority',
+                  dataIndex: 'priority',
+                  key: 'priority',
+                  render: (priority) => (
+                    <Tag color={priority === 'HIGH' ? 'red' : priority === 'MEDIUM' ? 'orange' : 'green'}>
+                      {priority}
+                    </Tag>
+                  )
+                },
+                {
+                  title: 'Status',
+                  dataIndex: 'status',
+                  key: 'status',
+                  render: (status) => (
+                    <Tag color={status === 'pending' ? 'default' : status === 'in_progress' ? 'processing' : 'success'}>
+                      {status.replace('_', ' ').toUpperCase()}
+                    </Tag>
+                  )
+                },
+                {
+                  title: 'Driver',
+                  dataIndex: 'assigned_driver',
+                  key: 'assigned_driver',
+                  render: (driver) => driver || '-'
+                },
+                {
+                  title: 'Customer',
+                  dataIndex: 'customer_name',
+                  key: 'customer_name',
+                  render: (customer) => customer || '-'
+                },
+                {
+                  title: 'Created',
+                  dataIndex: 'created_at',
+                  key: 'created_at',
+                  render: (date) => new Date(date).toLocaleDateString()
+                },
+                {
+                  title: 'Actions',
+                  key: 'actions',
+                  render: (_, record) => (
+                    <Space>
+                      <Button
+                        type="primary"
+                        size="small"
+                        icon={<EditOutlined />}
+                        onClick={() => handleEditInstruction(record)}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        type="primary"
+                        danger
+                        size="small"
+                        icon={<DeleteOutlined />}
+                        onClick={() => deleteCustomInstruction(record.id)}
+                      >
+                        Delete
+                      </Button>
+                    </Space>
+                  )
+                }
+              ]}
+              dataSource={customInstructions}
+              rowKey="id"
+              loading={loading}
+              pagination={{ pageSize: 10 }}
+              scroll={{ x: 800 }}
+            />
+          </Card>
+        </div>
+      )
+    }
+  ];
+
   return (
     <div>
-      <h2>Driver Collection Instructions</h2>
+      <h2>Driver Instructions Management</h2>
       
-      <Space wrap style={{ marginBottom: 16 }}>
-        <Alert
-          message={`${high} High Priority Collections`}
-          type="error"
-          icon={<ExclamationCircleOutlined />}
-        />
-        <Alert
-          message={`${medium} Medium Priority Collections`}
-          type="warning"
-          icon={<ExclamationCircleOutlined />}
-        />
-        <Alert
-          message={`${unable} Unable to Collect`}
-          type="warning"
-          icon={<ExclamationCircleOutlined />}
-        />
-        <Alert
-          message={`${pending} Pending Assignment`}
-          type="info"
-          icon={<ExclamationCircleOutlined />}
-        />
-      </Space>
-
-      <Card>
-        <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h3>Outstanding Equipment Collections</h3>
-          <Space>
-            <Select
-              value={statusFilter}
-              onChange={setStatusFilter}
-              style={{ width: 150 }}
-            >
-              <Option value="all">All Status</Option>
-              <Option value="pending">Pending</Option>
-              <Option value="assigned">Assigned</Option>
-              <Option value="completed">Completed</Option>
-              <Option value="unable_to_collect">Unable to Collect</Option>
-              <Option value="failed">Failed</Option>
-            </Select>
-            <Button onClick={fetchOutstandingBalances} loading={loading}>
-              Refresh
-            </Button>
-          </Space>
-        </div>
-        
-        <Table
-          columns={columns}
-          dataSource={filteredInstructions}
-          rowKey="id"
-          loading={loading}
-          pagination={{ pageSize: 10 }}
-          scroll={{ x: 800 }}
-        />
-      </Card>
+      <Tabs defaultActiveKey="auto-generated" items={tabItems} />
 
       <Modal
         title="Assign Collection to Driver"
@@ -407,6 +667,279 @@ const DriverInstructions = () => {
                 Assign Instruction
               </Button>
               <Button onClick={() => setModalVisible(false)}>
+                Cancel
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* Create Custom Instruction Modal */}
+      <Modal
+        title="Create New Driver Instruction"
+        open={createModalVisible}
+        onCancel={() => {
+          setCreateModalVisible(false);
+          createForm.resetFields();
+        }}
+        footer={null}
+        width={800}
+      >
+        <Form
+          form={createForm}
+          layout="vertical"
+          onFinish={createCustomInstruction}
+        >
+          <Form.Item
+            name="title"
+            label="Instruction Title"
+            rules={[{ required: true, message: 'Please enter a title' }]}
+          >
+            <Input placeholder="e.g., Deliver Equipment to ABC Company" />
+          </Form.Item>
+          
+          <Form.Item
+            name="content"
+            label="Instruction Content"
+            rules={[{ required: true, message: 'Please enter instruction content' }]}
+          >
+            <Input.TextArea rows={3} placeholder="Describe what the driver needs to do..." />
+          </Form.Item>
+          
+          <Form.Item
+            name="priority"
+            label="Priority"
+            rules={[{ required: true, message: 'Please select priority' }]}
+          >
+            <Select placeholder="Select priority">
+              <Option value="HIGH">HIGH</Option>
+              <Option value="MEDIUM">MEDIUM</Option>
+              <Option value="LOW">LOW</Option>
+            </Select>
+          </Form.Item>
+          
+          <Form.Item
+            name="assigned_driver"
+            label="Assigned Driver"
+          >
+            <Select placeholder="Select driver (optional)" showSearch optionFilterProp="children" allowClear>
+              {drivers.map(driver => (
+                <Option key={driver.id} value={driver.driver_name}>
+                  {driver.driver_name} {driver.employee_id ? `(${driver.employee_id})` : ''}
+                </Option>
+              ))}
+            </Select>
+          </Form.Item>
+          
+          <Form.Item
+            name="customer_name"
+            label="Customer Name"
+          >
+            <Input placeholder="Customer name (optional)" />
+          </Form.Item>
+          
+          <Form.Item
+            name="delivery_location"
+            label="Delivery Location"
+          >
+            <Input placeholder="Full delivery address (optional)" />
+          </Form.Item>
+          
+          <Form.Item
+            name="contact_phone"
+            label="Contact Phone"
+          >
+            <Input placeholder="Contact number (optional)" />
+          </Form.Item>
+          
+          <Form.Item
+            name="delivery_date"
+            label="Delivery Date"
+          >
+            <DatePicker 
+              showTime 
+              style={{ width: '100%' }} 
+              placeholder="Select delivery date and time (optional)"
+            />
+          </Form.Item>
+          
+          <Form.Item
+            name="equipment_type"
+            label="Equipment Type"
+          >
+            <Select placeholder="Select equipment type (optional)">
+              <Option value="pallet">Pallet</Option>
+              <Option value="cage">Cage</Option>
+              <Option value="dolly">Dolly</Option>
+              <Option value="stillage">Stillage</Option>
+              <Option value="container">Container</Option>
+              <Option value="other">Other</Option>
+            </Select>
+          </Form.Item>
+          
+          <Form.Item
+            name="equipment_quantity"
+            label="Equipment Quantity"
+          >
+            <InputNumber 
+              min={1} 
+              style={{ width: '100%' }} 
+              placeholder="Quantity (optional)"
+            />
+          </Form.Item>
+          
+          <Form.Item
+            name="special_instructions"
+            label="Special Instructions"
+          >
+            <Input.TextArea rows={2} placeholder="Any special notes or instructions..." />
+          </Form.Item>
+          
+          <Form.Item>
+            <Space>
+              <Button type="primary" htmlType="submit">
+                Create Instruction
+              </Button>
+              <Button onClick={() => setCreateModalVisible(false)}>
+                Cancel
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* Edit Custom Instruction Modal */}
+      <Modal
+        title="Edit Driver Instruction"
+        open={editModalVisible}
+        onCancel={() => {
+          setEditModalVisible(false);
+          setEditingInstruction(null);
+          editForm.resetFields();
+        }}
+        footer={null}
+        width={800}
+      >
+        <Form
+          form={editForm}
+          layout="vertical"
+          onFinish={updateCustomInstruction}
+        >
+          <Form.Item
+            name="title"
+            label="Instruction Title"
+            rules={[{ required: true, message: 'Please enter a title' }]}
+          >
+            <Input placeholder="e.g., Deliver Equipment to ABC Company" />
+          </Form.Item>
+          
+          <Form.Item
+            name="content"
+            label="Instruction Content"
+            rules={[{ required: true, message: 'Please enter instruction content' }]}
+          >
+            <Input.TextArea rows={3} placeholder="Describe what the driver needs to do..." />
+          </Form.Item>
+          
+          <Form.Item
+            name="priority"
+            label="Priority"
+            rules={[{ required: true, message: 'Please select priority' }]}
+          >
+            <Select placeholder="Select priority">
+              <Option value="HIGH">HIGH</Option>
+              <Option value="MEDIUM">MEDIUM</Option>
+              <Option value="LOW">LOW</Option>
+            </Select>
+          </Form.Item>
+          
+          <Form.Item
+            name="assigned_driver"
+            label="Assigned Driver"
+          >
+            <Select placeholder="Select driver (optional)" showSearch optionFilterProp="children" allowClear>
+              {drivers.map(driver => (
+                <Option key={driver.id} value={driver.driver_name}>
+                  {driver.driver_name} {driver.employee_id ? `(${driver.employee_id})` : ''}
+                </Option>
+              ))}
+            </Select>
+          </Form.Item>
+          
+          <Form.Item
+            name="customer_name"
+            label="Customer Name"
+          >
+            <Input placeholder="Customer name (optional)" />
+          </Form.Item>
+          
+          <Form.Item
+            name="delivery_location"
+            label="Delivery Location"
+          >
+            <Input placeholder="Full delivery address (optional)" />
+          </Form.Item>
+          
+          <Form.Item
+            name="contact_phone"
+            label="Contact Phone"
+          >
+            <Input placeholder="Contact number (optional)" />
+          </Form.Item>
+          
+          <Form.Item
+            name="delivery_date"
+            label="Delivery Date"
+          >
+            <DatePicker 
+              showTime 
+              style={{ width: '100%' }} 
+              placeholder="Select delivery date and time (optional)"
+            />
+          </Form.Item>
+          
+          <Form.Item
+            name="equipment_type"
+            label="Equipment Type"
+          >
+            <Select placeholder="Select equipment type (optional)">
+              <Option value="pallet">Pallet</Option>
+              <Option value="cage">Cage</Option>
+              <Option value="dolly">Dolly</Option>
+              <Option value="stillage">Stillage</Option>
+              <Option value="container">Container</Option>
+              <Option value="other">Other</Option>
+            </Select>
+          </Form.Item>
+          
+          <Form.Item
+            name="equipment_quantity"
+            label="Equipment Quantity"
+          >
+            <InputNumber 
+              min={1} 
+              style={{ width: '100%' }} 
+              placeholder="Quantity (optional)"
+            />
+          </Form.Item>
+          
+          <Form.Item
+            name="special_instructions"
+            label="Special Instructions"
+          >
+            <Input.TextArea rows={2} placeholder="Any special notes or instructions..." />
+          </Form.Item>
+          
+          <Form.Item>
+            <Space>
+              <Button type="primary" htmlType="submit">
+                Update Instruction
+              </Button>
+              <Button onClick={() => {
+                setEditModalVisible(false);
+                setEditingInstruction(null);
+                editForm.resetFields();
+              }}>
                 Cancel
               </Button>
             </Space>

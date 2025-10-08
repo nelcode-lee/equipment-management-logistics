@@ -29,6 +29,7 @@ import {
   AlertOutlined
 } from '@ant-design/icons';
 import axios from 'axios';
+import API_BASE_URL from '../config';
 
 const { Title, Text } = Typography;
 
@@ -54,9 +55,9 @@ const Insights = () => {
       
       // Fetch multiple data sources
       const [balancesResponse, movementsResponse, instructionsResponse] = await Promise.all([
-        axios.get('http://localhost:8000/balances'),
-        axios.get('http://localhost:8000/movements?limit=100'),
-        axios.get('http://localhost:8000/driver-instructions')
+        axios.get(`${API_BASE_URL}/balances`),
+        axios.get(`${API_BASE_URL}/movements?limit=100`),
+        axios.get(`${API_BASE_URL}/driver-instructions`)
       ]);
 
       const balances = balancesResponse.data;

@@ -73,6 +73,17 @@ class Alert(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     resolved = Column(Boolean, default=False)
 
+class DriverInstruction(Base):
+    __tablename__ = "driver_instructions"
+    
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    title = Column(String, nullable=False)
+    content = Column(Text, nullable=False)
+    priority = Column(String, nullable=False)  # "HIGH", "MEDIUM", "LOW"
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
 # Create tables
 def create_tables():
     Base.metadata.create_all(bind=engine)
