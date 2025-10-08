@@ -77,7 +77,7 @@ const FleetManagement = () => {
         notes: values.notes
       };
 
-      await axios.put(`http://localhost:8000/drivers/${editingDriver.id}`, driverData);
+      await axios.put(`${API_BASE_URL}/drivers/${editingDriver.id}`, driverData);
       message.success('Driver updated successfully');
       setDriverModalVisible(false);
       setEditingDriver(null);
@@ -91,7 +91,7 @@ const FleetManagement = () => {
 
   const deleteDriver = async (driverId) => {
     try {
-      await axios.delete(`http://localhost:8000/drivers/${driverId}`);
+      await axios.delete(`${API_BASE_URL}/drivers/${driverId}`);
       message.success('Driver deleted successfully');
       fetchDrivers();
     } catch (error) {
@@ -180,7 +180,7 @@ const FleetManagement = () => {
         notes: values.notes
       };
 
-      await axios.put(`http://localhost:8000/vehicles/${editingVehicle.id}`, vehicleData);
+      await axios.put(`${API_BASE_URL}/vehicles/${editingVehicle.id}`, vehicleData);
       message.success('Vehicle updated successfully');
       setVehicleModalVisible(false);
       setEditingVehicle(null);
@@ -194,7 +194,7 @@ const FleetManagement = () => {
 
   const deleteVehicle = async (vehicleId) => {
     try {
-      await axios.delete(`http://localhost:8000/vehicles/${vehicleId}`);
+      await axios.delete(`${API_BASE_URL}/vehicles/${vehicleId}`);
       message.success('Vehicle deleted successfully');
       fetchVehicles();
     } catch (error) {

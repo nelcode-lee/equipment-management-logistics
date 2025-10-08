@@ -87,7 +87,7 @@ const EquipmentManagement = () => {
     try {
       if (editingSpec) {
         // Update existing spec
-        await axios.put(`http://localhost:8000/equipment-specifications/${editingSpec.id}`, values);
+        await axios.put(`${API_BASE_URL}/equipment-specifications/${editingSpec.id}`, values);
         message.success('Equipment specification updated successfully');
       } else {
         // Create new spec
@@ -122,7 +122,7 @@ const EquipmentManagement = () => {
 
   const handleDelete = async (specId) => {
     try {
-      await axios.delete(`http://localhost:8000/equipment-specifications/${specId}`);
+      await axios.delete(`${API_BASE_URL}/equipment-specifications/${specId}`);
       message.success('Equipment specification deactivated successfully');
       fetchEquipmentSpecs();
     } catch (error) {

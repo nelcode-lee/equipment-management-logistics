@@ -77,7 +77,7 @@ const DriverApp = () => {
     
     setLoading(true);
     try {
-      const response = await axios.get(`http://localhost:8000/driver-instructions?driver_name=${encodeURIComponent(driverName)}&status=assigned`);
+      const response = await axios.get(`${API_BASE_URL}/driver-instructions?driver_name=${encodeURIComponent(driverName)}&status=assigned`);
       setInstructions(response.data);
     } catch (error) {
       console.error('Error fetching instructions:', error);
@@ -156,7 +156,7 @@ const DriverApp = () => {
         <Card style={{ textAlign: 'center' }}>
           {companyLogo ? (
             <img 
-              src={`http://localhost:8000${companyLogo}`} 
+              src={`${API_BASE_URL}${companyLogo}`} 
               alt="Company Logo" 
               style={{ 
                 height: '80px', 

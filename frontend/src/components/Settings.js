@@ -152,7 +152,7 @@ const Settings = () => {
   const handleThresholdChange = async (customerName, equipmentType, newThreshold) => {
     try {
       const response = await axios.put(
-        `http://localhost:8000/customers/${encodeURIComponent(customerName)}/thresholds/${equipmentType}`,
+        `${API_BASE_URL}/customers/${encodeURIComponent(customerName)}/thresholds/${equipmentType}`,
         null,
         { params: { threshold: newThreshold } }
       );
@@ -174,7 +174,7 @@ const Settings = () => {
     try {
       // Update the equipment specification's default threshold
       const response = await axios.put(
-        `http://localhost:8000/equipment-specifications/${specId}`,
+        `${API_BASE_URL}/equipment-specifications/${specId}`,
         { default_threshold: newThreshold }
       );
       

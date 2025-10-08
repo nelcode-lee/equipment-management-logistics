@@ -24,7 +24,7 @@ const Balances = () => {
         params.append('status', statusFilter);
       }
       
-      const response = await axios.get(`http://localhost:8000/balances?${params.toString()}`);
+      const response = await axios.get(`${API_BASE_URL}/balances?${params.toString()}`);
       setBalances(response.data);
     } catch (error) {
       console.error('Error fetching balances:', error);

@@ -32,7 +32,9 @@ from src.models.database import (
     Alert as DBAlert,
     DriverInstruction as DBInstruction,
     Customer as DBCustomer,
-    EquipmentSpecification as DBEquipmentSpec
+    EquipmentSpecification as DBEquipmentSpec,
+    Driver as DBDriver,
+    Vehicle as DBVehicle
 )
 from src.models.auth_models import User
 from src.services.auth_dependencies import get_current_active_user
@@ -177,6 +179,8 @@ def get_alerts(
 @app.get("/driver-instructions")
 def get_driver_instructions(
     is_active: Optional[bool] = Query(None),
+    driver_name: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
     db: Session = Depends(get_db)
 ):
     """Get driver instructions"""
@@ -184,9 +188,12 @@ def get_driver_instructions(
     
     if is_active is not None:
         query = query.filter(DBInstruction.is_active == is_active)
-    else:
-        # Default to active instructions only
-        query = query.filter(DBInstruction.is_active == True)
+    
+    if driver_name:
+        query = query.filter(DBInstruction.assigned_driver == driver_name)
+    
+    if status:
+        query = query.filter(DBInstruction.status == status)
     
     instructions = query.order_by(DBInstruction.created_at.desc()).all()
     
@@ -195,13 +202,126 @@ def get_driver_instructions(
             "id": str(i.id),
             "title": i.title,
             "content": i.content,
+            "customer_name": i.customer_name,
+            "equipment_type": i.equipment_type,
+            "equipment_quantity": i.equipment_quantity,
+            "assigned_driver": i.assigned_driver,
+            "status": i.status,
             "priority": i.priority,
+            "delivery_date": i.delivery_date.isoformat() if i.delivery_date else None,
+            "special_instructions": i.special_instructions,
             "is_active": i.is_active,
             "created_at": i.created_at.isoformat() if i.created_at else None,
             "updated_at": i.updated_at.isoformat() if i.updated_at else None
         }
         for i in instructions
     ]
+
+@app.post("/driver-instructions")
+def create_driver_instruction(
+    instruction_data: dict,
+    db: Session = Depends(get_db)
+):
+    """Create a new driver instruction"""
+    try:
+        instruction = DBInstruction(
+            title=instruction_data.get("title"),
+            content=instruction_data.get("content"),
+            customer_name=instruction_data.get("customer_name"),
+            equipment_type=instruction_data.get("equipment_type"),
+            equipment_quantity=instruction_data.get("equipment_quantity"),
+            assigned_driver=instruction_data.get("assigned_driver"),
+            status=instruction_data.get("status", "pending"),
+            priority=instruction_data.get("priority", "MEDIUM"),
+            delivery_date=instruction_data.get("delivery_date"),
+            special_instructions=instruction_data.get("special_instructions"),
+            is_active=instruction_data.get("is_active", True)
+        )
+        
+        db.add(instruction)
+        db.commit()
+        db.refresh(instruction)
+        
+        return {
+            "id": str(instruction.id),
+            "title": instruction.title,
+            "content": instruction.content,
+            "customer_name": instruction.customer_name,
+            "equipment_type": instruction.equipment_type,
+            "equipment_quantity": instruction.equipment_quantity,
+            "assigned_driver": instruction.assigned_driver,
+            "status": instruction.status,
+            "priority": instruction.priority,
+            "delivery_date": instruction.delivery_date.isoformat() if instruction.delivery_date else None,
+            "special_instructions": instruction.special_instructions,
+            "is_active": instruction.is_active,
+            "created_at": instruction.created_at.isoformat() if instruction.created_at else None,
+            "updated_at": instruction.updated_at.isoformat() if instruction.updated_at else None
+        }
+    except Exception as e:
+        db.rollback()
+        return {"error": f"Failed to create driver instruction: {str(e)}"}
+
+@app.put("/driver-instructions/{instruction_id}")
+def update_driver_instruction(
+    instruction_id: str,
+    instruction_data: dict,
+    db: Session = Depends(get_db)
+):
+    """Update an existing driver instruction"""
+    try:
+        instruction = db.query(DBInstruction).filter(DBInstruction.id == instruction_id).first()
+        if not instruction:
+            return {"error": "Driver instruction not found"}
+        
+        # Update fields
+        for field, value in instruction_data.items():
+            if hasattr(instruction, field) and value is not None:
+                setattr(instruction, field, value)
+        
+        instruction.updated_at = datetime.utcnow()
+        db.commit()
+        db.refresh(instruction)
+        
+        return {
+            "id": str(instruction.id),
+            "title": instruction.title,
+            "content": instruction.content,
+            "customer_name": instruction.customer_name,
+            "equipment_type": instruction.equipment_type,
+            "equipment_quantity": instruction.equipment_quantity,
+            "assigned_driver": instruction.assigned_driver,
+            "status": instruction.status,
+            "priority": instruction.priority,
+            "delivery_date": instruction.delivery_date.isoformat() if instruction.delivery_date else None,
+            "special_instructions": instruction.special_instructions,
+            "is_active": instruction.is_active,
+            "created_at": instruction.created_at.isoformat() if instruction.created_at else None,
+            "updated_at": instruction.updated_at.isoformat() if instruction.updated_at else None
+        }
+    except Exception as e:
+        db.rollback()
+        return {"error": f"Failed to update driver instruction: {str(e)}"}
+
+@app.delete("/driver-instructions/{instruction_id}")
+def delete_driver_instruction(
+    instruction_id: str,
+    db: Session = Depends(get_db)
+):
+    """Delete a driver instruction"""
+    try:
+        instruction = db.query(DBInstruction).filter(DBInstruction.id == instruction_id).first()
+        if not instruction:
+            return {"error": "Driver instruction not found"}
+        
+        db.delete(instruction)
+        db.commit()
+        
+        return {"message": "Driver instruction deleted successfully"}
+    except Exception as e:
+        db.rollback()
+        return {"error": f"Failed to delete driver instruction: {str(e)}"}
+
 
 @app.get("/company/logo")
 def get_company_logo():
@@ -700,6 +820,306 @@ def get_company_logo():
         "company_name": "Equipment Management Logistics",
         "version": "1.0.0"
     }
+
+# ==================== DRIVER MANAGEMENT ENDPOINTS ====================
+
+@app.get("/drivers")
+def get_drivers(
+    is_active: Optional[bool] = Query(None),
+    status: Optional[str] = Query(None),
+    db: Session = Depends(get_db)
+):
+    """Get all drivers with optional filtering"""
+    query = db.query(DBDriver)
+    
+    if is_active is not None:
+        query = query.filter(DBDriver.is_active == is_active)
+    
+    if status:
+        query = query.filter(DBDriver.status == status)
+    
+    drivers = query.order_by(DBDriver.driver_name).all()
+    
+    return [
+        {
+            "id": str(d.id),
+            "driver_name": d.driver_name,
+            "employee_id": d.employee_id,
+            "email": d.email,
+            "phone": d.phone,
+            "license_number": d.license_number,
+            "license_expiry": d.license_expiry.isoformat() if d.license_expiry else None,
+            "status": d.status,
+            "assigned_vehicle_id": d.assigned_vehicle_id,
+            "notes": d.notes,
+            "is_active": d.is_active,
+            "created_at": d.created_at.isoformat() if d.created_at else None,
+            "updated_at": d.updated_at.isoformat() if d.updated_at else None
+        }
+        for d in drivers
+    ]
+
+@app.post("/drivers")
+def create_driver(
+    driver_data: dict,
+    db: Session = Depends(get_db)
+):
+    """Create a new driver"""
+    try:
+        driver = DBDriver(
+            driver_name=driver_data.get("driver_name"),
+            employee_id=driver_data.get("employee_id"),
+            email=driver_data.get("email"),
+            phone=driver_data.get("phone"),
+            license_number=driver_data.get("license_number"),
+            license_expiry=driver_data.get("license_expiry"),
+            status=driver_data.get("status", "active"),
+            assigned_vehicle_id=driver_data.get("assigned_vehicle_id"),
+            notes=driver_data.get("notes")
+        )
+        
+        db.add(driver)
+        db.commit()
+        db.refresh(driver)
+        
+        return {
+            "id": str(driver.id),
+            "driver_name": driver.driver_name,
+            "employee_id": driver.employee_id,
+            "email": driver.email,
+            "phone": driver.phone,
+            "license_number": driver.license_number,
+            "license_expiry": driver.license_expiry.isoformat() if driver.license_expiry else None,
+            "status": driver.status,
+            "assigned_vehicle_id": driver.assigned_vehicle_id,
+            "notes": driver.notes,
+            "is_active": driver.is_active,
+            "created_at": driver.created_at.isoformat() if driver.created_at else None,
+            "updated_at": driver.updated_at.isoformat() if driver.updated_at else None
+        }
+    except Exception as e:
+        db.rollback()
+        return {"error": f"Failed to create driver: {str(e)}"}
+
+@app.put("/drivers/{driver_id}")
+def update_driver(
+    driver_id: str,
+    driver_data: dict,
+    db: Session = Depends(get_db)
+):
+    """Update an existing driver"""
+    try:
+        driver = db.query(DBDriver).filter(DBDriver.id == driver_id).first()
+        if not driver:
+            return {"error": "Driver not found"}
+        
+        # Update fields
+        for field, value in driver_data.items():
+            if hasattr(driver, field) and value is not None:
+                setattr(driver, field, value)
+        
+        driver.updated_at = datetime.utcnow()
+        db.commit()
+        db.refresh(driver)
+        
+        return {
+            "id": str(driver.id),
+            "driver_name": driver.driver_name,
+            "employee_id": driver.employee_id,
+            "email": driver.email,
+            "phone": driver.phone,
+            "license_number": driver.license_number,
+            "license_expiry": driver.license_expiry.isoformat() if driver.license_expiry else None,
+            "status": driver.status,
+            "assigned_vehicle_id": driver.assigned_vehicle_id,
+            "notes": driver.notes,
+            "is_active": driver.is_active,
+            "created_at": driver.created_at.isoformat() if driver.created_at else None,
+            "updated_at": driver.updated_at.isoformat() if driver.updated_at else None
+        }
+    except Exception as e:
+        db.rollback()
+        return {"error": f"Failed to update driver: {str(e)}"}
+
+@app.delete("/drivers/{driver_id}")
+def delete_driver(
+    driver_id: str,
+    db: Session = Depends(get_db)
+):
+    """Delete a driver (soft delete)"""
+    try:
+        driver = db.query(DBDriver).filter(DBDriver.id == driver_id).first()
+        if not driver:
+            return {"error": "Driver not found"}
+        
+        driver.is_active = False
+        driver.updated_at = datetime.utcnow()
+        db.commit()
+        
+        return {"message": "Driver deleted successfully"}
+    except Exception as e:
+        db.rollback()
+        return {"error": f"Failed to delete driver: {str(e)}"}
+
+# ==================== VEHICLE MANAGEMENT ENDPOINTS ====================
+
+@app.get("/vehicles")
+def get_vehicles(
+    is_active: Optional[bool] = Query(None),
+    status: Optional[str] = Query(None),
+    db: Session = Depends(get_db)
+):
+    """Get all vehicles with optional filtering"""
+    query = db.query(DBVehicle)
+    
+    if is_active is not None:
+        query = query.filter(DBVehicle.is_active == is_active)
+    
+    if status:
+        query = query.filter(DBVehicle.status == status)
+    
+    vehicles = query.order_by(DBVehicle.fleet_number).all()
+    
+    return [
+        {
+            "id": str(v.id),
+            "fleet_number": v.fleet_number,
+            "registration": v.registration,
+            "make": v.make,
+            "model": v.model,
+            "year": v.year,
+            "vehicle_type": v.vehicle_type,
+            "capacity": v.capacity,
+            "status": v.status,
+            "mot_expiry": v.mot_expiry.isoformat() if v.mot_expiry else None,
+            "insurance_expiry": v.insurance_expiry.isoformat() if v.insurance_expiry else None,
+            "last_service_date": v.last_service_date.isoformat() if v.last_service_date else None,
+            "next_service_due": v.next_service_due.isoformat() if v.next_service_due else None,
+            "mileage": v.mileage,
+            "notes": v.notes,
+            "is_active": v.is_active,
+            "created_at": v.created_at.isoformat() if v.created_at else None,
+            "updated_at": v.updated_at.isoformat() if v.updated_at else None
+        }
+        for v in vehicles
+    ]
+
+@app.post("/vehicles")
+def create_vehicle(
+    vehicle_data: dict,
+    db: Session = Depends(get_db)
+):
+    """Create a new vehicle"""
+    try:
+        vehicle = DBVehicle(
+            fleet_number=vehicle_data.get("fleet_number"),
+            registration=vehicle_data.get("registration"),
+            make=vehicle_data.get("make"),
+            model=vehicle_data.get("model"),
+            year=vehicle_data.get("year"),
+            vehicle_type=vehicle_data.get("vehicle_type"),
+            capacity=vehicle_data.get("capacity"),
+            status=vehicle_data.get("status", "available"),
+            mot_expiry=vehicle_data.get("mot_expiry"),
+            insurance_expiry=vehicle_data.get("insurance_expiry"),
+            last_service_date=vehicle_data.get("last_service_date"),
+            next_service_due=vehicle_data.get("next_service_due"),
+            mileage=vehicle_data.get("mileage"),
+            notes=vehicle_data.get("notes")
+        )
+        
+        db.add(vehicle)
+        db.commit()
+        db.refresh(vehicle)
+        
+        return {
+            "id": str(vehicle.id),
+            "fleet_number": vehicle.fleet_number,
+            "registration": vehicle.registration,
+            "make": vehicle.make,
+            "model": vehicle.model,
+            "year": vehicle.year,
+            "vehicle_type": vehicle.vehicle_type,
+            "capacity": vehicle.capacity,
+            "status": vehicle.status,
+            "mot_expiry": vehicle.mot_expiry.isoformat() if vehicle.mot_expiry else None,
+            "insurance_expiry": vehicle.insurance_expiry.isoformat() if vehicle.insurance_expiry else None,
+            "last_service_date": vehicle.last_service_date.isoformat() if vehicle.last_service_date else None,
+            "next_service_due": vehicle.next_service_due.isoformat() if vehicle.next_service_due else None,
+            "mileage": vehicle.mileage,
+            "notes": vehicle.notes,
+            "is_active": vehicle.is_active,
+            "created_at": vehicle.created_at.isoformat() if vehicle.created_at else None,
+            "updated_at": vehicle.updated_at.isoformat() if vehicle.updated_at else None
+        }
+    except Exception as e:
+        db.rollback()
+        return {"error": f"Failed to create vehicle: {str(e)}"}
+
+@app.put("/vehicles/{vehicle_id}")
+def update_vehicle(
+    vehicle_id: str,
+    vehicle_data: dict,
+    db: Session = Depends(get_db)
+):
+    """Update an existing vehicle"""
+    try:
+        vehicle = db.query(DBVehicle).filter(DBVehicle.id == vehicle_id).first()
+        if not vehicle:
+            return {"error": "Vehicle not found"}
+        
+        # Update fields
+        for field, value in vehicle_data.items():
+            if hasattr(vehicle, field) and value is not None:
+                setattr(vehicle, field, value)
+        
+        vehicle.updated_at = datetime.utcnow()
+        db.commit()
+        db.refresh(vehicle)
+        
+        return {
+            "id": str(vehicle.id),
+            "fleet_number": vehicle.fleet_number,
+            "registration": vehicle.registration,
+            "make": vehicle.make,
+            "model": vehicle.model,
+            "year": vehicle.year,
+            "vehicle_type": vehicle.vehicle_type,
+            "capacity": vehicle.capacity,
+            "status": vehicle.status,
+            "mot_expiry": vehicle.mot_expiry.isoformat() if vehicle.mot_expiry else None,
+            "insurance_expiry": vehicle.insurance_expiry.isoformat() if vehicle.insurance_expiry else None,
+            "last_service_date": vehicle.last_service_date.isoformat() if vehicle.last_service_date else None,
+            "next_service_due": vehicle.next_service_due.isoformat() if vehicle.next_service_due else None,
+            "mileage": vehicle.mileage,
+            "notes": vehicle.notes,
+            "is_active": vehicle.is_active,
+            "created_at": vehicle.created_at.isoformat() if vehicle.created_at else None,
+            "updated_at": vehicle.updated_at.isoformat() if vehicle.updated_at else None
+        }
+    except Exception as e:
+        db.rollback()
+        return {"error": f"Failed to update vehicle: {str(e)}"}
+
+@app.delete("/vehicles/{vehicle_id}")
+def delete_vehicle(
+    vehicle_id: str,
+    db: Session = Depends(get_db)
+):
+    """Delete a vehicle (soft delete)"""
+    try:
+        vehicle = db.query(DBVehicle).filter(DBVehicle.id == vehicle_id).first()
+        if not vehicle:
+            return {"error": "Vehicle not found"}
+        
+        vehicle.is_active = False
+        vehicle.updated_at = datetime.utcnow()
+        db.commit()
+        
+        return {"message": "Vehicle deleted successfully"}
+    except Exception as e:
+        db.rollback()
+        return {"error": f"Failed to delete vehicle: {str(e)}"}
 
 # Create tables on startup
 @app.on_event("startup")

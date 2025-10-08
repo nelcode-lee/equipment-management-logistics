@@ -30,7 +30,7 @@ const Movements = () => {
         params.append('equipment_type', filters.equipment_type);
       }
       
-      const response = await axios.get(`http://localhost:8000/movements?${params.toString()}`);
+      const response = await axios.get(`${API_BASE_URL}/movements?${params.toString()}`);
       setMovements(response.data);
     } catch (error) {
       console.error('Error fetching movements:', error);

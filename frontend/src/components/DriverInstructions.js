@@ -148,7 +148,7 @@ const DriverInstructions = () => {
         special_instructions: values.special_instructions
       };
 
-      await axios.put(`http://localhost:8000/driver-instructions/${editingInstruction.id}`, instructionData);
+      await axios.put(`${API_BASE_URL}/driver-instructions/${editingInstruction.id}`, instructionData);
       message.success('Instruction updated successfully!');
       setEditModalVisible(false);
       setEditingInstruction(null);
@@ -167,7 +167,7 @@ const DriverInstructions = () => {
       content: 'Are you sure you want to delete this instruction?',
       onOk: async () => {
         try {
-          await axios.delete(`http://localhost:8000/driver-instructions/${instructionId}`);
+          await axios.delete(`${API_BASE_URL}/driver-instructions/${instructionId}`);
           message.success('Instruction deleted successfully!');
           fetchCustomInstructions();
         } catch (error) {
