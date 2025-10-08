@@ -78,10 +78,11 @@ def health(db: Session = Depends(get_db)):
 def get_movements(
     customer_name: Optional[str] = Query(None),
     equipment_type: Optional[str] = Query(None),
-    limit: int = Query(100),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=500),
     db: Session = Depends(get_db)
 ):
-    """Get equipment movements"""
+    """Get equipment movements with pagination"""
     query = db.query(DBMovement)
     
     if customer_name:
@@ -90,35 +91,46 @@ def get_movements(
     if equipment_type:
         query = query.filter(DBMovement.equipment_type == equipment_type)
     
-    movements = query.order_by(DBMovement.timestamp.desc()).limit(limit).all()
+    # Get total count for pagination
+    total = query.count()
     
-    return [
-        {
-            "movement_id": m.movement_id,
-            "customer_name": m.customer_name,
-            "equipment_type": m.equipment_type,
-            "equipment_name": m.equipment_name,
-            "equipment_color": m.equipment_color,
-            "equipment_size": m.equipment_size,
-            "equipment_grade": m.equipment_grade,
-            "quantity": m.quantity,
-            "direction": m.direction,
-            "timestamp": m.timestamp.isoformat() if m.timestamp else None,
-            "driver_name": m.driver_name,
-            "confidence_score": m.confidence_score,
-            "notes": m.notes,
-            "verified": m.verified,
-            "source_image_url": m.source_image_url
-        }
-        for m in movements
-    ]
+    # Apply pagination with optimized query (uses indexes)
+    movements = query.order_by(DBMovement.timestamp.desc()).offset(skip).limit(limit).all()
+    
+    return {
+        "total": total,
+        "skip": skip,
+        "limit": limit,
+        "data": [
+            {
+                "movement_id": m.movement_id,
+                "customer_name": m.customer_name,
+                "equipment_type": m.equipment_type,
+                "equipment_name": m.equipment_name,
+                "equipment_color": m.equipment_color,
+                "equipment_size": m.equipment_size,
+                "equipment_grade": m.equipment_grade,
+                "quantity": m.quantity,
+                "direction": m.direction,
+                "timestamp": m.timestamp.isoformat() if m.timestamp else None,
+                "driver_name": m.driver_name,
+                "confidence_score": m.confidence_score,
+                "notes": m.notes,
+                "verified": m.verified,
+                "source_image_url": m.source_image_url
+            }
+            for m in movements
+        ]
+    }
 
 @app.get("/balances")
 def get_balances(
     status: Optional[str] = Query(None),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=500),
     db: Session = Depends(get_db)
 ):
-    """Get customer balances"""
+    """Get customer balances with pagination"""
     query = db.query(DBBalance)
     
     if status == "over_threshold":
@@ -131,19 +143,28 @@ def get_balances(
             DBBalance.current_balance <= DBBalance.threshold
         )
     
-    balances = query.all()
+    # Get total count
+    total = query.count()
     
-    return [
-        {
-            "customer_name": b.customer_name,
-            "equipment_type": b.equipment_type,
-            "current_balance": b.current_balance,
-            "threshold": b.threshold,
-            "last_movement": b.last_movement.isoformat() if b.last_movement else None,
-            "status": "over_threshold" if b.current_balance > b.threshold else "negative" if b.current_balance < 0 else "normal"
-        }
-        for b in balances
-    ]
+    # Apply pagination
+    balances = query.offset(skip).limit(limit).all()
+    
+    return {
+        "total": total,
+        "skip": skip,
+        "limit": limit,
+        "data": [
+            {
+                "customer_name": b.customer_name,
+                "equipment_type": b.equipment_type,
+                "current_balance": b.current_balance,
+                "threshold": b.threshold,
+                "last_movement": b.last_movement.isoformat() if b.last_movement else None,
+                "status": "over_threshold" if b.current_balance > b.threshold else "negative" if b.current_balance < 0 else "normal"
+            }
+            for b in balances
+        ]
+    }
 
 @app.get("/alerts")
 def get_alerts(

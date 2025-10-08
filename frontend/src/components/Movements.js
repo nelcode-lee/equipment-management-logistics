@@ -8,7 +8,12 @@ const { Option } = Select;
 
 const Movements = () => {
   const [movements, setMovements] = useState([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 50,
+  });
   const [filters, setFilters] = useState({
     customer_name: '',
     equipment_type: '',
@@ -16,7 +21,7 @@ const Movements = () => {
 
   useEffect(() => {
     fetchMovements();
-  }, []);
+  }, [pagination.current, pagination.pageSize]);
 
   const fetchMovements = async () => {
     try {
@@ -30,8 +35,22 @@ const Movements = () => {
         params.append('equipment_type', filters.equipment_type);
       }
       
+      // Add pagination parameters
+      const skip = (pagination.current - 1) * pagination.pageSize;
+      params.append('skip', skip);
+      params.append('limit', pagination.pageSize);
+      
       const response = await axios.get(`${API_BASE_URL}/movements?${params.toString()}`);
-      setMovements(response.data);
+      
+      // Handle paginated response
+      if (response.data.data) {
+        setMovements(response.data.data);
+        setTotal(response.data.total);
+      } else {
+        // Fallback for old API format
+        setMovements(response.data);
+        setTotal(response.data.length);
+      }
     } catch (error) {
       console.error('Error fetching movements:', error);
       message.error('Failed to fetch movements');
@@ -45,11 +64,13 @@ const Movements = () => {
   };
 
   const handleSearch = () => {
+    setPagination({ current: 1, pageSize: pagination.pageSize }); // Reset to first page
     fetchMovements();
   };
 
   const handleReset = () => {
     setFilters({ customer_name: '', equipment_type: '' });
+    setPagination({ current: 1, pageSize: 50 }); // Reset pagination
     fetchMovements();
   };
 
@@ -196,11 +217,18 @@ const Movements = () => {
           dataSource={movements}
           columns={columns}
           rowKey="movement_id"
+          loading={loading}
           pagination={{
-            pageSize: 20,
+            current: pagination.current,
+            pageSize: pagination.pageSize,
+            total: total,
             showSizeChanger: true,
             showQuickJumper: true,
+            pageSizeOptions: ['20', '50', '100', '200'],
             showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} movements`,
+            onChange: (page, pageSize) => {
+              setPagination({ current: page, pageSize });
+            },
           }}
           scroll={{ x: 1200 }}
         />

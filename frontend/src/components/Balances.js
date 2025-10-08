@@ -8,6 +8,7 @@ const { Option } = Select;
 
 const Balances = () => {
   const [balances, setBalances] = useState([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('');
 
@@ -25,7 +26,16 @@ const Balances = () => {
       }
       
       const response = await axios.get(`${API_BASE_URL}/balances?${params.toString()}`);
-      setBalances(response.data);
+      
+      // Handle paginated response
+      if (response.data.data) {
+        setBalances(response.data.data);
+        setTotal(response.data.total);
+      } else {
+        // Fallback for old API format
+        setBalances(response.data);
+        setTotal(response.data.length);
+      }
     } catch (error) {
       console.error('Error fetching balances:', error);
       message.error('Failed to fetch balances');
@@ -130,6 +140,7 @@ const Balances = () => {
   const overThresholdBalances = balances.filter(b => b.status === 'over_threshold');
   const negativeBalances = balances.filter(b => b.status === 'negative');
   const totalCustomers = new Set(balances.map(b => b.customer_name)).size;
+  const displayTotal = total || balances.length;
 
   if (loading) {
     return (
@@ -207,11 +218,13 @@ const Balances = () => {
           dataSource={balances}
           columns={columns}
           rowKey={(record) => `${record.customer_name}-${record.equipment_type}`}
+          loading={loading}
           pagination={{
-            pageSize: 20,
+            pageSize: 50,
             showSizeChanger: true,
             showQuickJumper: true,
-            showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} balances`,
+            pageSizeOptions: ['20', '50', '100'],
+            showTotal: (total, range) => `${range[0]}-${range[1]} of ${displayTotal} balances`,
           }}
           scroll={{ x: 800 }}
         />
