@@ -15,7 +15,7 @@ from ..config import settings
 from ..models.database import get_db, create_tables, EquipmentMovement as DBMovement, CustomerBalance, EquipmentSpecification as DBEquipmentSpec
 from ..models.schemas import (
     EquipmentMovement, EquipmentMovementResponse, CustomerBalance, ExtractionResult, 
-    AlertResponse, HealthResponse, EquipmentType, EquipmentSpecification
+    AlertResponse, HealthResponse, EquipmentType, EquipmentSpecification, Direction
 )
 from ..models.auth_models import User, UserRole
 from ..services.ai_service import ai_service
@@ -115,6 +115,78 @@ async def upload_photo(
         db.commit()
     
     return result
+
+@app.post("/manual-entry")
+async def manual_entry(
+    movement_data: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_driver)
+):
+    """
+    Manual equipment movement entry - failsafe data capture
+    """
+    try:
+        # Generate movement ID
+        movement_id = str(uuid.uuid4())
+        
+        # Create movement object
+        timestamp = datetime.fromisoformat(movement_data['timestamp'].replace('Z', '+00:00'))
+        
+        movement = EquipmentMovement(
+            movement_id=movement_id,
+            customer_name=movement_data['customer_name'],
+            equipment_type=EquipmentType(movement_data['equipment_type']),
+            quantity=movement_data['quantity'],
+            direction=Direction(movement_data['direction']),
+            timestamp=timestamp,
+            driver_name=movement_data.get('driver_name', current_user.username),
+            confidence_score=1.0,  # Manual entries have 100% confidence
+            notes=movement_data.get('notes', 'Manual Entry'),
+            verified=True,  # Manual entries are pre-verified
+            source_image_url=None
+        )
+        
+        # Save to database
+        db_movement = DBMovement(
+            movement_id=movement.movement_id,
+            customer_name=movement.customer_name,
+            equipment_type=movement.equipment_type.value,
+            quantity=movement.quantity,
+            direction=movement.direction.value,
+            timestamp=movement.timestamp,
+            driver_name=movement.driver_name,
+            confidence_score=movement.confidence_score,
+            notes=movement.notes,
+            verified=movement.verified,
+            source_image_url=None
+        )
+        db.add(db_movement)
+        
+        # Update customer balance
+        balance_service = BalanceService(db)
+        balance_service.update_customer_balance(movement)
+        
+        db.commit()
+        
+        return {
+            "success": True,
+            "movement_id": movement_id,
+            "message": "Manual entry recorded successfully",
+            "movement": {
+                "movement_id": movement_id,
+                "customer_name": movement.customer_name,
+                "equipment_type": movement.equipment_type.value,
+                "quantity": movement.quantity,
+                "direction": movement.direction.value,
+                "timestamp": movement.timestamp.isoformat(),
+                "driver_name": movement.driver_name,
+                "verified": True
+            }
+        }
+    
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=f"Failed to record manual entry: {str(e)}")
 
 @app.get("/movements", response_model=List[EquipmentMovement])
 def get_movements(

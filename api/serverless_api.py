@@ -283,6 +283,90 @@ def create_driver_instruction(
         db.rollback()
         return {"error": f"Failed to create driver instruction: {str(e)}"}
 
+@app.post("/manual-entry")
+async def manual_entry(
+    movement_data: dict,
+    db: Session = Depends(get_db)
+):
+    """
+    Manual equipment movement entry - failsafe data capture
+    """
+    try:
+        # Generate movement ID
+        movement_id = str(uuid.uuid4())
+        
+        # Parse timestamp
+        timestamp_str = movement_data['timestamp']
+        if timestamp_str.endswith('Z'):
+            timestamp_str = timestamp_str.replace('Z', '+00:00')
+        timestamp = datetime.fromisoformat(timestamp_str)
+        
+        # Create database movement
+        db_movement = DBMovement(
+            movement_id=movement_id,
+            customer_name=movement_data['customer_name'],
+            equipment_type=movement_data['equipment_type'],
+            quantity=movement_data['quantity'],
+            direction=movement_data['direction'],
+            timestamp=timestamp,
+            driver_name=movement_data.get('driver_name', 'Manual Entry'),
+            confidence_score=1.0,  # Manual entries have 100% confidence
+            notes=movement_data.get('notes', 'Manual Entry'),
+            verified=True,  # Manual entries are pre-verified
+            source_image_url=None
+        )
+        db.add(db_movement)
+        
+        # Update or create customer balance
+        balance_key = f"{movement_data['customer_name']}_{movement_data['equipment_type']}"
+        balance = db.query(DBBalance).filter(
+            DBBalance.customer_name == movement_data['customer_name'],
+            DBBalance.equipment_type == movement_data['equipment_type']
+        ).first()
+        
+        if balance:
+            # Update existing balance
+            if movement_data['direction'] == 'in':
+                balance.current_balance += movement_data['quantity']
+            else:  # 'out'
+                balance.current_balance -= movement_data['quantity']
+            balance.last_movement = timestamp
+            balance.status = "over_threshold" if balance.current_balance > balance.threshold else "negative" if balance.current_balance < 0 else "normal"
+        else:
+            # Create new balance
+            initial_balance = movement_data['quantity'] if movement_data['direction'] == 'in' else -movement_data['quantity']
+            balance = DBBalance(
+                customer_name=movement_data['customer_name'],
+                equipment_type=movement_data['equipment_type'],
+                current_balance=initial_balance,
+                threshold=20,  # Default threshold
+                last_movement=timestamp,
+                status="normal"
+            )
+            db.add(balance)
+        
+        db.commit()
+        
+        return {
+            "success": True,
+            "movement_id": movement_id,
+            "message": "Manual entry recorded successfully",
+            "movement": {
+                "movement_id": movement_id,
+                "customer_name": movement_data['customer_name'],
+                "equipment_type": movement_data['equipment_type'],
+                "quantity": movement_data['quantity'],
+                "direction": movement_data['direction'],
+                "timestamp": timestamp.isoformat(),
+                "driver_name": movement_data.get('driver_name', 'Manual Entry'),
+                "verified": True
+            }
+        }
+    
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=f"Failed to record manual entry: {str(e)}")
+
 @app.put("/driver-instructions/{instruction_id}")
 def update_driver_instruction(
     instruction_id: str,
