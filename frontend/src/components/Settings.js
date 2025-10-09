@@ -39,20 +39,19 @@ const Settings = () => {
   const fetchCustomers = async () => {
     try {
       setLoading(true);
-      // Get unique customers from movements
-      const response = await axios.get(`${API_BASE_URL}/movements?limit=1000`);
-      // Handle paginated response format
-      const movements = response.data.data || response.data;
-      const uniqueCustomers = [...new Set(movements.map(m => m.customer_name))];
+      // Get customers from the customers endpoint (more reliable than movements)
+      const response = await axios.get(`${API_BASE_URL}/customers`);
+      const customersData = response.data;
       
-      const customerList = uniqueCustomers.map(name => ({
-        id: name,
-        name: name,
-        location: 'UK', // Default location
-        contact: '',
-        email: '',
-        phone: '',
-        status: 'active'
+      // Map to the format expected by the component
+      const customerList = customersData.map(customer => ({
+        id: customer.id,
+        name: customer.customer_name,
+        location: customer.city || customer.country || 'UK',
+        contact: customer.contact_person || '',
+        email: customer.email || '',
+        phone: customer.phone || '',
+        status: customer.status || 'active'
       }));
       
       setCustomers(customerList);
@@ -68,7 +67,8 @@ const Settings = () => {
     try {
       // Get current thresholds from balances
       const response = await axios.get(`${API_BASE_URL}/balances`);
-      const balances = response.data;
+      // Handle paginated response format
+      const balances = response.data.data || response.data;
       
       const thresholdMap = {};
       balances.forEach(balance => {
