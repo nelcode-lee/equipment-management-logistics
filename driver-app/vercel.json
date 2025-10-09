@@ -1,0 +1,27 @@
+{
+  "version": 2,
+  "name": "equipment-driver-app",
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "build"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/static/(.*)",
+      "dest": "/static/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ],
+  "env": {
+    "REACT_APP_API_URL": "https://equipmentmanagementlogistics-84alu2mr5.vercel.app",
+    "REACT_APP_APP_TYPE": "driver"
+  }
+}
