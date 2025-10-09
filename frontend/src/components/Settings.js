@@ -752,7 +752,9 @@ const ThresholdsTable = ({ onThresholdChange, equipmentTypes }) => {
     try {
       setLoading(true);
       const response = await axios.get(`${API_BASE_URL}/balances`);
-      setBalances(response.data);
+      // Handle paginated response format
+      const balancesData = response.data.data || response.data;
+      setBalances(balancesData);
     } catch (error) {
       console.error('Error fetching balances:', error);
     } finally {
