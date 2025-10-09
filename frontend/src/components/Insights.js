@@ -60,8 +60,9 @@ const Insights = () => {
         axios.get(`${API_BASE_URL}/driver-instructions`)
       ]);
 
-      const balances = balancesResponse.data;
-      const movements = movementsResponse.data;
+      // Handle paginated response format
+      const balances = balancesResponse.data.data || balancesResponse.data;
+      const movements = movementsResponse.data.data || movementsResponse.data;
       const instructions = instructionsResponse.data;
 
       // Calculate equipment statistics

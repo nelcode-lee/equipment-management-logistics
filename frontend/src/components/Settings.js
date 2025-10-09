@@ -41,7 +41,8 @@ const Settings = () => {
       setLoading(true);
       // Get unique customers from movements
       const response = await axios.get(`${API_BASE_URL}/movements?limit=1000`);
-      const movements = response.data;
+      // Handle paginated response format
+      const movements = response.data.data || response.data;
       const uniqueCustomers = [...new Set(movements.map(m => m.customer_name))];
       
       const customerList = uniqueCustomers.map(name => ({

@@ -28,7 +28,8 @@ const DriverInstructions = () => {
     setLoading(true);
     try {
       const response = await axios.get(`${API_BASE_URL}/balances?status=over_threshold`);
-      const balances = response.data;
+      // Handle paginated response format
+      const balances = response.data.data || response.data;
       
       // Convert balances to driver instructions
       const instructions = balances.map(balance => ({

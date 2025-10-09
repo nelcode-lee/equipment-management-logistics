@@ -57,9 +57,10 @@ const Dashboard = () => {
       ]);
 
       const healthData = healthResponse.data;
-      const movementsData = movementsResponse.data;
+      // Handle paginated response format
+      const movementsData = movementsResponse.data.data || movementsResponse.data;
       const alertsData = alertsResponse.data;
-      const balancesData = balancesResponse.data;
+      const balancesData = balancesResponse.data.data || balancesResponse.data;
       const instructionsData = instructionsResponse.data;
 
       // Calculate comprehensive metrics
